@@ -1,6 +1,10 @@
 import * as THREE from "./three/three.module.js";
 import { VRButton } from './three/webxr/VRButton.js';
 import { OrbitControls } from './three/controls/OrbitControls.js';
+import HoloCube from "./HoloCube.js";
+import { GUI } from './three/libs/lil-gui.module.min.js'; 
+import HoloMaterial from "./HoloMaterial.js";
+
 
 const renderer = new THREE.WebGLRenderer();
 renderer.autoClear = false;
@@ -44,3 +48,40 @@ renderer.xr.addEventListener('sessionstart', ( event ) => {
 renderer.xr.addEventListener('sessionend', ( event ) => {
 	console.log(`session end`);
 });
+
+
+
+const holoCube = new HoloCube();
+scene.add(holoCube.display);
+
+//const holoMaterial = new HoloMaterial();
+
+const gui = new GUI();
+const guiParams = {
+	//fpv: true,
+	//head: new THREE.Vector3(1, 1, 1),
+	//translate: new THREE.Vector3(),
+	scale: new THREE.Vector3(1, 1, 1),
+	//axis: new THREE.Vector3(1, 0, 0),
+	//angle: 0,
+	//helpers: () => {
+	//	cameraHelperX.visible = !cameraHelperX.visible;
+	//	cameraHelperY.visible = !cameraHelperY.visible;
+	//	cameraHelperZ.visible = !cameraHelperZ.visible;
+	//},
+	//cubes: () => {
+	//	cube0.visible = !cube0.visible;
+	//	cubeX.visible = !cubeX.visible;
+	//	cubeY.visible = !cubeY.visible;
+	//	cubeZ.visible = !cubeZ.visible;
+	//}
+}
+
+function updateHoloScale ( ) {
+	holoCube.viewScale = guiParams.scale;
+}
+
+const scaleFolder = gui.addFolder("scale");
+scaleFolder.add(guiParams.scale, "x").min(0.1).max(10.0).step(0.05).onChange(updateHoloScale);
+scaleFolder.add(guiParams.scale, "y").min(0.1).max(10.0).step(0.05).onChange(updateHoloScale);
+scaleFolder.add(guiParams.scale, "z").min(0.1).max(10.0).step(0.05).onChange(updateHoloScale);
