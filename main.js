@@ -4,7 +4,8 @@ import { OrbitControls } from './three/controls/OrbitControls.js';
 import HoloCube from "./HoloCube.js";
 import { GUI } from './three/libs/lil-gui.module.min.js'; 
 import HoloMaterial from "./HoloMaterial.js";
-
+import HoloCubeDisplay from "./HoloCubeDisplay.js";
+import {remoteScene} from "./remoteScene.js";
 
 const renderer = new THREE.WebGLRenderer();
 renderer.autoClear = false;
@@ -24,11 +25,68 @@ camera.position.set( 2, 2, 6 );
 
 const orbitControls = new OrbitControls( camera, renderer.domElement );
 
-
 const gridHelper = new THREE.GridHelper();
 scene.add( gridHelper );
 
+
+
+
+const textureWidth = 2048;
+const textureHeight = 2048;
+const renderSettings = {
+	minFilter: THREE.NearestFilter,
+	magFilter: THREE.NearestFilter,
+	format: THREE.RGBAFormat,
+	type: THREE.FloatType,
+}
+
+const renderTargets = {};
+const screenTextures = {};
+const cameras = {};
+
+
+for( const face of ["x", "y", "z"] ) {
+	renderTargets[face] = new THREE.WebGLRenderTarget(textureWidth, textureHeight, renderSettings);
+	renderTargets[face].depthTexture = new THREE.DepthTexture(textureWidth, textureHeight);
+	renderTargets[face].depthTexture.format = THREE.DepthFormat;
+	renderTargets[face].depthTexture.type = THREE.FloatType;
+
+	screenTextures[face] = {
+		texture: renderTargets[face].texture,
+		depthTexture: renderTargets[face].depthTexture,
+	}
+
+	cameras[face] = new THREE.PerspectiveCamera();
+	cameras[face].matrixAutoUpdate = false;
+}
+
+const holoCube = new HoloCube();
+const holoCubeDisplay = new HoloCubeDisplay( holoCube, screenTextures );
+scene.add(holoCubeDisplay.display);
+scene.add(holoCubeDisplay.screens);
+
+
+
+
+
+
+
+function updateCameras ( ) {
+
+}
+
+
 function animate ( ) {
+	holoCubeDisplay.update();
+	holoCube.computeCameraMatrices(camera.position, cameras);
+	holoCubeDisplay.updateScreens( camera.position );
+
+	for( const face of ["x", "y", "z"] ) {
+		renderer.setRenderTarget( renderTargets[face] );
+		renderer.render( remoteScene, cameras[face] );
+	}
+
+	renderer.setRenderTarget( null );
 	renderer.render( scene, camera );
 }
 
@@ -51,37 +109,97 @@ renderer.xr.addEventListener('sessionend', ( event ) => {
 
 
 
-const holoCube = new HoloCube();
-scene.add(holoCube.display);
 
-//const holoMaterial = new HoloMaterial();
+function updateHoloCubeTransform ( ) {
+	holoCube.position = guiParams.holoCubeTransforms.position;
+	holoCube.scale = guiParams.holoCubeTransforms.scale;
+	// const axisH = new THREE.Vector3().set(guiParams.holoCubeTransforms.rotation.x, guiParams.holoCubeTransforms.rotation.y, guiParams.holoCubeTransforms.rotation.z)
+	// const rotationHoloCube = new THREE.Quaternion().setFromAxisAngle(axisH, guiParams.holoCubeTransforms.rotation.w);
+	// holoCube.rotation = rotationHoloCube;
+
+	holoCube.viewPosition = guiParams.remoteTransforms.position;
+	holoCube.viewScale = guiParams.remoteTransforms.scale;
+	const axisV = new THREE.Vector3().set(guiParams.remoteTransforms.rotation.x, guiParams.remoteTransforms.rotation.y, guiParams.remoteTransforms.rotation.z)
+	const rotationRemote = new THREE.Quaternion().setFromAxisAngle(axisV, guiParams.remoteTransforms.rotation.w);
+	holoCube.viewRotation = rotationRemote;
+}
+
+function normalizeLockedX ( vector ) {
+	const length = vector.length();
+	
+	const lengthRemain = Math.sqrt(length - vector.x*vector.x);
+	const lengthOther = Math.hypot(vector.y, vector.z);
+	if(lengthOther != 0) {
+		vector.y = vector.y / lengthOther * lengthRemain; 
+		vector.z = vector.z / lengthOther * lengthRemain; 
+	} else {
+		vector.y = lengthRemain; 
+		vector.z = 0; 
+	}
+	vector.normalize();
+}
+
+function updateAxisH ( a0, a1, a2 ) {
+	const axis = guiParams.holoCubeTransforms.rotation;
+	updateAxes ( axis, a0, a1, a2 );
+	updateHoloCubeTransform();
+}
+
+function updateAxisV ( a0, a1, a2 ) {
+	const axis = guiParams.remoteTransforms.rotation;
+	updateAxes ( axis, a0, a1, a2 );
+	updateHoloCubeTransform();
+}
+
+function updateAxes ( axis, a0, a1, a2 ) {
+	const nAxis = new THREE.Vector3(axis[a0], axis[a1], axis[a2])
+	normalizeLockedX(nAxis);
+	axis[a0] = nAxis.x;
+	axis[a1] = nAxis.y;
+	axis[a2] = nAxis.z;
+}
 
 const gui = new GUI();
 const guiParams = {
-	//fpv: true,
-	//head: new THREE.Vector3(1, 1, 1),
-	//translate: new THREE.Vector3(),
-	scale: new THREE.Vector3(1, 1, 1),
-	//axis: new THREE.Vector3(1, 0, 0),
-	//angle: 0,
-	//helpers: () => {
-	//	cameraHelperX.visible = !cameraHelperX.visible;
-	//	cameraHelperY.visible = !cameraHelperY.visible;
-	//	cameraHelperZ.visible = !cameraHelperZ.visible;
-	//},
-	//cubes: () => {
-	//	cube0.visible = !cube0.visible;
-	//	cubeX.visible = !cubeX.visible;
-	//	cubeY.visible = !cubeY.visible;
-	//	cubeZ.visible = !cubeZ.visible;
-	//}
+	holoCubeTransforms : {
+		position: new THREE.Vector3(0, 0, 0),
+		scale: new THREE.Vector3(1, 1, 1),
+		rotation: new THREE.Vector4(1, 0, 0, 0),
+	},
+	remoteTransforms : {
+		position: new THREE.Vector3(0, 0, 0),
+		scale: new THREE.Vector3(1, 1, 1),
+		rotation: new THREE.Vector4(1, 0, 0, 0),
+	},
 }
 
-function updateHoloScale ( ) {
-	holoCube.viewScale = guiParams.scale;
-}
 
-const scaleFolder = gui.addFolder("scale");
-scaleFolder.add(guiParams.scale, "x").min(0.1).max(10.0).step(0.05).onChange(updateHoloScale);
-scaleFolder.add(guiParams.scale, "y").min(0.1).max(10.0).step(0.05).onChange(updateHoloScale);
-scaleFolder.add(guiParams.scale, "z").min(0.1).max(10.0).step(0.05).onChange(updateHoloScale);
+const holoCubeTransformsFolder = gui.addFolder("Holocube transforms");
+const holoCubePositionFolder = holoCubeTransformsFolder.addFolder("position");
+holoCubePositionFolder.add(guiParams.holoCubeTransforms.position, "x").min(-10.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+holoCubePositionFolder.add(guiParams.holoCubeTransforms.position, "y").min(0.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+holoCubePositionFolder.add(guiParams.holoCubeTransforms.position, "z").min(-10.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+const holoCubeScaleFolder = holoCubeTransformsFolder.addFolder("scale");
+holoCubeScaleFolder.add(guiParams.holoCubeTransforms.scale, "x").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+holoCubeScaleFolder.add(guiParams.holoCubeTransforms.scale, "y").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+holoCubeScaleFolder.add(guiParams.holoCubeTransforms.scale, "z").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+// const holoCubeRotationFolder = holoCubeTransformsFolder.addFolder("rotation");
+// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "x").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("x", "y", "z")}).listen();
+// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "y").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("y", "z", "x")}).listen();
+// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "z").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("z", "x", "y")}).listen();
+// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
+
+const remoteTransformsFolder = gui.addFolder("Remote Scene transforms");
+const remoteScenePositionFolder = remoteTransformsFolder.addFolder("position");
+remoteScenePositionFolder.add(guiParams.remoteTransforms.position, "x").min(-10.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+remoteScenePositionFolder.add(guiParams.remoteTransforms.position, "y").min(0.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+remoteScenePositionFolder.add(guiParams.remoteTransforms.position, "z").min(-10.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+const remoteSceneScaleFolder = remoteTransformsFolder.addFolder("scale");
+remoteSceneScaleFolder.add(guiParams.remoteTransforms.scale, "x").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+remoteSceneScaleFolder.add(guiParams.remoteTransforms.scale, "y").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+remoteSceneScaleFolder.add(guiParams.remoteTransforms.scale, "z").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+const remoteRotationFolder = remoteTransformsFolder.addFolder("rotation");
+remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "x").min(-1).max(1).step(0.01).onChange(() => { updateAxisV("x", "y", "z")}).listen();
+remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "y").min(-1).max(1).step(0.01).onChange(() => { updateAxisV("y", "z", "x")}).listen();
+remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "z").min(-1).max(1).step(0.01).onChange(() => { updateAxisV("z", "x", "y")}).listen();
+remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
