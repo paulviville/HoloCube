@@ -69,6 +69,19 @@ export default class HoloCubeDisplay {
 		return this.#screens.group;
 	}
 
+	setDisplayLayer ( layer ) {
+		this.#display.group.layers.set(layer);
+		this.#display.faces.layers.set(layer);
+		this.#display.edges.layers.set(layer);
+	}
+
+	setScreenLayers ( layer ) {
+		this.#screens.x.layers.set(layer);
+		this.#screens.y.layers.set(layer);
+		this.#screens.z.layers.set(layer);
+		this.#screens.group.layers.set(layer);
+	}
+
 	update ( ) {
 		// console.log( `HoloCubeDisplay - update` );
 

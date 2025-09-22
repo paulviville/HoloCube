@@ -5,7 +5,11 @@ import HoloCube from "./HoloCube.js";
 import { GUI } from './three/libs/lil-gui.module.min.js'; 
 import HoloMaterial from "./HoloMaterial.js";
 import HoloCubeDisplay from "./HoloCubeDisplay.js";
-import {remoteScene} from "./remoteScene.js";
+import { remoteScene } from "./remoteScene.js";
+import Stats from './three/libs/stats.module.js';
+import { InteractiveGroup } from './three/interactive/InteractiveGroup.js';
+import { HTMLMesh } from './three/interactive/HTMLMesh.js';
+import { XRControllerModelFactory } from './three/webxr/XRControllerModelFactory.js';
 
 const renderer = new THREE.WebGLRenderer();
 renderer.autoClear = false;
@@ -21,13 +25,12 @@ document.body.appendChild( VRButton.createButton( renderer ) );
 const scene = new THREE.Scene();
 scene.background = new THREE.Color( 0xaaaaaa );
 const camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.01, 50 );
-camera.position.set( 2, 2, 6 );
+camera.position.set( 1.5, 1.5, 2 );
 
 const orbitControls = new OrbitControls( camera, renderer.domElement );
 
 const gridHelper = new THREE.GridHelper();
 scene.add( gridHelper );
-
 
 
 
@@ -65,28 +68,91 @@ const holoCubeDisplay = new HoloCubeDisplay( holoCube, screenTextures );
 scene.add(holoCubeDisplay.display);
 scene.add(holoCubeDisplay.screens);
 
+// camera.layers.disable(1);
+
+const renderTargetsR = {};
+const screenTexturesR = {};
+const camerasR = {};
 
 
+for( const face of ["x", "y", "z"] ) {
+	renderTargetsR[face] = new THREE.WebGLRenderTarget(textureWidth, textureHeight, renderSettings);
+	renderTargetsR[face].depthTexture = new THREE.DepthTexture(textureWidth, textureHeight);
+	renderTargetsR[face].depthTexture.format = THREE.DepthFormat;
+	renderTargetsR[face].depthTexture.type = THREE.FloatType;
 
+	screenTexturesR[face] = {
+		texture: renderTargetsR[face].texture,
+		depthTexture: renderTargetsR[face].depthTexture,
+	}
 
-
-
-function updateCameras ( ) {
-
+	camerasR[face] = new THREE.PerspectiveCamera();
+	camerasR[face].matrixAutoUpdate = false;
 }
 
+const holoCubeDisplayR = new HoloCubeDisplay( holoCube, screenTexturesR );
+
+// console.log(renderer.xr.getRenderTarget())
+
+
+
+
+
+
+
+let xrRenderTarget;
 
 function animate ( ) {
 	holoCubeDisplay.update();
-	holoCube.computeCameraMatrices(camera.position, cameras);
-	holoCubeDisplay.updateScreens( camera.position );
+	holoCubeDisplayR.update();
 
-	for( const face of ["x", "y", "z"] ) {
-		renderer.setRenderTarget( renderTargets[face] );
-		renderer.render( remoteScene, cameras[face] );
+	const currentRT = renderer.getRenderTarget();
+	const VRenabled = renderer.xr.enabled;
+
+	renderer.xr.enabled = false;
+	if(renderer.xr.isPresenting) {
+		const stereoCameras = renderer.xr.getCamera().cameras;
+
+		holoCube.computeCameraMatrices( stereoCameras[0].position, cameras );
+		holoCubeDisplay.updateScreens( stereoCameras[0].position );
+
+		for( const face of ["x", "y", "z"] ) {
+			renderer.setRenderTarget( renderTargets[face] );
+			renderer.render( remoteScene, cameras[face] );
+		}
+
+		holoCube.computeCameraMatrices( stereoCameras[1].position, camerasR );
+		holoCubeDisplayR.updateScreens( stereoCameras[1].position );
+
+		for( const face of ["x", "y", "z"] ) {
+			renderer.setRenderTarget( renderTargetsR[face] );
+			renderer.render( remoteScene, camerasR[face] );
+		}
 	}
 
+	else {
+		holoCube.computeCameraMatrices( camera.position, cameras );
+		holoCubeDisplay.updateScreens( camera.position );
+
+		for( const face of ["x", "y", "z"] ) {
+			renderer.setRenderTarget( renderTargets[face] );
+			renderer.render( remoteScene, cameras[face] );
+		}
+	}
+
+
+
+
+
+
+
 	renderer.setRenderTarget( null );
+
+	renderer.render( scene, camera );
+
+	renderer.xr.enabled = VRenabled;
+	renderer.setRenderTarget( currentRT );
+
 	renderer.render( scene, camera );
 }
 
@@ -100,11 +166,20 @@ renderer.xr.addEventListener('sessionstart', ( event ) => {
 	const transform = new XRRigidTransform( offsetPosition.multiplyScalar(-1), offsetRotation ); 
 	const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace( transform );
 
-  renderer.xr.setReferenceSpace( teleportSpaceOffset );
+	xrRenderTarget = renderer.getRenderTarget();
+	renderer.xr.setReferenceSpace( teleportSpaceOffset );
+
+	scene.add(holoCubeDisplayR.screens);
+	holoCubeDisplay.setScreenLayers(1);
+	holoCubeDisplayR.setScreenLayers(2);
+
 });
 
 renderer.xr.addEventListener('sessionend', ( event ) => {
 	console.log(`session end`);
+	scene.remove(holoCubeDisplayR.screens);
+	holoCubeDisplay.setScreenLayers(0);
+
 });
 
 
@@ -159,7 +234,33 @@ function updateAxes ( axis, a0, a1, a2 ) {
 	axis[a2] = nAxis.z;
 }
 
-const gui = new GUI();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const gui = new GUI({ width: 300 });
 const guiParams = {
 	holoCubeTransforms : {
 		position: new THREE.Vector3(0, 0, 0),
@@ -172,6 +273,8 @@ const guiParams = {
 		rotation: new THREE.Vector4(1, 0, 0, 0),
 	},
 }
+
+
 
 
 const holoCubeTransformsFolder = gui.addFolder("Holocube transforms");
@@ -203,3 +306,42 @@ remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "x").min(-1).max(1
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "y").min(-1).max(1).step(0.01).onChange(() => { updateAxisV("y", "z", "x")}).listen();
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "z").min(-1).max(1).step(0.01).onChange(() => { updateAxisV("z", "x", "y")}).listen();
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
+
+
+
+
+
+/// VR specific code
+
+
+const interactiveGroup = new InteractiveGroup();
+interactiveGroup.listenToPointerEvents( renderer, camera );
+// interactiveGroup.listenToXRControllerEvents( controller1 );
+// interactiveGroup.listenToXRControllerEvents( controller2 );
+scene.add( interactiveGroup );
+
+const guiMesh = new HTMLMesh( gui.domElement );
+const statsMesh = new HTMLMesh( gui.domElement );
+console.log(guiMesh)
+guiMesh.position.x = - 0.75;
+guiMesh.position.y = 1.5;
+guiMesh.position.z = - 0.5;
+guiMesh.rotation.y = Math.PI / 4;
+guiMesh.scale.setScalar( 5 );
+interactiveGroup.add( guiMesh );
+
+
+const lineGeometry = new THREE.BufferGeometry();
+lineGeometry.setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 5 ) ] );
+
+const controller1 = renderer.xr.getController( 0 );
+controller1.add( new THREE.Line( lineGeometry ) );
+scene.add( controller1 );
+
+const controllerModelFactory = new XRControllerModelFactory();
+const controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+scene.add( controllerGrip1 );
+
+interactiveGroup.listenToPointerEvents( renderer, camera );
+interactiveGroup.listenToXRControllerEvents( controller1 );
