@@ -1,8 +1,6 @@
 import DepthMaterial from "./DepthMaterial.js";
+import PickingMaterial from "./PickingMaterial.js";
 import * as THREE from "./three/three.module.js";
-
-const TEXTURE_WIDTH = 1024;
-const TEXTURE_HEIGHT = 1024;
 
 export default class HoloCubeDisplay {
 	#holocube;
@@ -11,14 +9,16 @@ export default class HoloCubeDisplay {
 		faces: undefined,
 		edges: undefined,
 		group: new THREE.Group( ),
-	}
+	};
 
 	#screens = {
 		x: undefined,
 		y: undefined,
 		z: undefined,
 		group: new THREE.Group( ),
-	}
+	};
+
+	#screenMaterials = {};
 
 	constructor ( holoCube, screenTextures ) {
 		console.log( `HoloCubeDisplay - constructor` );
@@ -30,8 +30,6 @@ export default class HoloCubeDisplay {
 	}
 
 	#initializeDisplay ( ) {
-		console.log( `HoloCubeDisplay - #initializeDisplay` );
-
 		const displayGeometry = new THREE.BoxGeometry( 1, 1, 1 );
 		const displayMaterial = new THREE.MeshLambertMaterial({ color: 0xDDDDDD, transparent: true, opacity: 0.1 });
 
@@ -46,27 +44,30 @@ export default class HoloCubeDisplay {
 	}
 
 	#initializeScreens ( screenTextures ) {
-		console.log( `HoloCubeDisplay - #initializeScreens` );
-
 		const screenGeometry = new THREE.PlaneGeometry( 1, 1 );
 
 		for ( const [ face, st ] of Object.entries( screenTextures ) ) {
-			const screenMaterial = new DepthMaterial( st.texture, st.depthTexture );
-			this.#screens[face] = new THREE.Mesh( screenGeometry, screenMaterial );
+			this.#screenMaterials[face] = {
+				depth: new DepthMaterial( st.texture, st.depthTexture ),
+				picking: new PickingMaterial( st.depthTexture ),
+			}
+			this.#screens[face] = new THREE.Mesh( screenGeometry, this.#screenMaterials[face].picking );
 			this.#screens.group.add( this.#screens[face] );
 		}
 	}
 	
 	get display ( ) {
-		// console.log( `HoloCubeDisplay - get display` );
-
 		return this.#display.group;
 	}
 
 	get screens ( ) {
-		// console.log( `HoloCubeDisplay - get screens` );
-
 		return this.#screens.group;
+	}
+
+	set picking ( bool ) {
+		for ( const [ face, materials ] of Object.entries( this.#screenMaterials ) ) {
+			this.#screens[face].material = bool ? materials.picking : materials.depth;
+		}
 	}
 
 	setDisplayLayer ( layer ) {
@@ -83,8 +84,6 @@ export default class HoloCubeDisplay {
 	}
 
 	update ( ) {
-		// console.log( `HoloCubeDisplay - update` );
-
 		this.#display.group.scale.copy( this.#holocube.displayScale );
 		this.#display.group.position.copy( this.#holocube.displayPosition );
 		this.#display.group.quaternion.copy( this.#holocube.rotation );
@@ -128,17 +127,18 @@ export default class HoloCubeDisplay {
 
 	setScreenUniforms ( uniforms ) {
 		for ( const [ face, value ] of Object.entries( uniforms ) ) {
-			this.#screens[face].material.setUniforms( value );
+			// this.#screens[face].material.setUniforms( value );
+			// this.#screens[face].material.setUniforms( value );
+			this.#screenMaterials[face].depth.setUniforms( value );
+			this.#screenMaterials[face].picking.setUniforms( value );
 		}
 	}
 
 	set displayVisible ( value ) {
-
 		this.#display.group.visible = value;
 	}
 
 	set screensVisible ( value ) {
-
 		this.#screens.group.visible = value;
 	}
 }

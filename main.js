@@ -318,7 +318,7 @@ const interactiveGroup = new InteractiveGroup();
 interactiveGroup.listenToPointerEvents( renderer, camera );
 // interactiveGroup.listenToXRControllerEvents( controller1 );
 // interactiveGroup.listenToXRControllerEvents( controller2 );
-scene.add( interactiveGroup );
+// scene.add( interactiveGroup );
 
 const guiMesh = new HTMLMesh( gui.domElement );
 const statsMesh = new HTMLMesh( gui.domElement );

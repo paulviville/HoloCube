@@ -41,61 +41,41 @@ export default class HoloCube {
 	}
 
 	set scale ( scale ) {
-		// console.log( `HoloCube - set scale` );
-
 		this.#displayTransform.scale.copy( scale );
-
 		this.#normalizeScale( );
 	}
 
 	set position ( position ) {
-		// console.log( `HoloCube - set position` );
-
 		this.#displayTransform.position.copy( position );
 	}
 
 	get position ( ) {
-		// console.log( `HoloCube - get position` );
-
 		return this.#displayTransform.position.clone( );
 	}
 
 	set rotation ( rotation ) {
-		// console.log( `HoloCube - set rotation` );
-
 		this.#displayTransform.rotation.copy( rotation );
 	}
 
 	get rotation (  ) {
-		// console.log( `HoloCube - get rotation` );
-
 		return this.#displayTransform.rotation.clone( );
 	}
 
 
 	set viewScale ( scale ) {
-		// console.log( `HoloCube - set viewScale` );
-
 		this.#viewTransform.scale.copy( scale );
-		
 		this.#normalizeScale( );
 	}
 
 	set viewPosition ( position ) {
-		// console.log( `HoloCube - set viewPosition` );
-
 		this.#viewTransform.position.copy( position );
 	}
 
 	set viewRotation ( rotation ) {
-		// console.log( `HoloCube - set viewrotation` );
-
 		this.#viewTransform.rotation.copy( rotation );
 	}
 
 	#normalizeScale ( ) {
-		// console.log( `HoloCube - #normalizeScale` );
-
 		this.#scalingFactor = Math.max( this.#viewTransform.scale.x, Math.max( this.#viewTransform.scale.y, this.#viewTransform.scale.z ) );
 		this.#normalizedViewScale.copy( this.#viewTransform.scale ).divideScalar( this.#scalingFactor );
 	
@@ -105,14 +85,10 @@ export default class HoloCube {
 	}
 
 	get displayScale ( ) {
-		// console.log( `HoloCube - get displayScale` );
-
 		return this.#normalizedDisplayScale;
 	}
 
 	get displayPosition ( ) {
-		// console.log( `HoloCube - get displayPosition` );
-
 		return this.#displayTransform.position;
 	}
 
@@ -186,8 +162,6 @@ export default class HoloCube {
 	}
 
 	#updateTransformMatrices () {
-		// console.log( `HoloCube - #updateTransformMatrices` );
-
 		this.#displayMatrix.compose(
 			this.#displayTransform.position,
 			this.#displayTransform.rotation,
@@ -264,8 +238,6 @@ export default class HoloCube {
 	}
 
 	computeCameraMatrices ( eye, cameras = {} ) {
-		// console.log( `HoloCube - computeCameraMatrices` );
-
 		this.#updateTransformMatrices( );
 
 		const mEye = this.worldToModel(eye.clone());
