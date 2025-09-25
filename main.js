@@ -133,7 +133,7 @@ function animate ( ) {
 	else {
 		holoCube.computeCameraMatrices( camera.position, cameras );
 		holoCubeDisplay.updateScreens( camera.position );
-
+		
 		for( const face of ["x", "y", "z"] ) {
 			renderer.setRenderTarget( renderTargets[face] );
 			renderer.render( remoteScene, cameras[face] );
@@ -148,7 +148,7 @@ function animate ( ) {
 
 	renderer.setRenderTarget( null );
 
-	renderer.render( scene, camera );
+	renderer.render( holoCubeDisplay.screens, camera );
 
 	renderer.xr.enabled = VRenabled;
 	renderer.setRenderTarget( currentRT );
