@@ -134,6 +134,12 @@ export default class HoloCubeDisplay {
 		}
 	}
 
+	setPickingRay ( ray ) {
+		for ( const face of [ "x", "y", "z" ] ) {
+			this.#screenMaterials[face].picking.setUniforms( ray );
+		}
+	}
+
 	set displayVisible ( value ) {
 		this.#display.group.visible = value;
 	}

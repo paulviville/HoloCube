@@ -106,6 +106,17 @@ function animate ( ) {
 	holoCubeDisplay.update();
 	holoCubeDisplayR.update();
 
+	const origin = new THREE.Vector3(-1, -1, -1);
+	const direction = new THREE.Vector3(1, 1, 1).normalize();
+	const epsilon = 0.125;
+
+	holoCubeDisplay.setPickingRay({
+		origin,
+		direction,
+		epsilon,
+	});
+
+
 	const currentRT = renderer.getRenderTarget();
 	const VRenabled = renderer.xr.enabled;
 
