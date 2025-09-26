@@ -63,6 +63,14 @@ for( const face of ["x", "y", "z"] ) {
 	cameras[face].matrixAutoUpdate = false;
 }
 
+const pickingTextureWidth = 1024;
+const pickingTextureHeight = 1024;
+const pickingRenderTarget = new THREE.WebGLRenderTarget(pickingTextureWidth, pickingTextureHeight, renderSettings);
+
+
+
+
+
 const holoCube = new HoloCube();
 const holoCubeDisplay = new HoloCubeDisplay( holoCube, screenTextures );
 scene.add(holoCubeDisplay.display);
@@ -96,9 +104,81 @@ const holoCubeDisplayR = new HoloCubeDisplay( holoCube, screenTexturesR );
 
 
 
+const lineGeometry = new THREE.BufferGeometry();
+lineGeometry.setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 5 ) ] );
+
+const controller1 = renderer.xr.getController( 0 );
+controller1.add( new THREE.Line( lineGeometry ) );
+scene.add( controller1 );
+
+const controllerModelFactory = new XRControllerModelFactory();
+const controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+scene.add( controllerGrip1 );
+
+// interactiveGroup.listenToPointerEvents( renderer, camera );
+// interactiveGroup.listenToXRControllerEvents( controller1 );
 
 
+const controllerForward = new THREE.Vector3();
+const controllerPosition = new THREE.Vector3();
+// console.log(controller1.getWorldPosition)
+controller1.getWorldDirection(controllerForward);
+controller1.getWorldPosition(controllerPosition);
+console.log(controllerForward);
+console.log(controllerPosition);
 
+const controllerArrow = new THREE.ArrowHelper(controllerForward, controllerForward)
+scene.add(controllerArrow)
+
+
+const origin = new THREE.Vector3(0, 0, 0);
+const direction = new THREE.Vector3(1, 1, 1).normalize();
+const epsilon = 0.125;
+
+const pickingTextureSize = pickingTextureWidth * pickingTextureHeight;
+const readPickingTarget = new Float32Array( 4 * pickingTextureSize );
+
+function getClosestHit ( ) {
+	const closestPoint = new THREE.Vector3();
+	let minDist = 1000000.0;
+	let dist = 0.;
+	let count = 0.; 
+
+	renderer.readRenderTargetPixels(pickingRenderTarget, 0, 0, pickingTextureWidth, pickingTextureHeight, readPickingTarget);
+	// console.log(readPickingTarget);
+	const pixel = new THREE.Vector4();
+	const point = new THREE.Vector3();
+	for ( let p = 0; p < pickingTextureSize; ++p ) {
+		pixel.fromArray( readPickingTarget, 4 * p );
+		if ( readPickingTarget[4*p+3] ) {
+				++count;
+		// if ( pixel.w != 0 ) {
+			point.set( pixel.x, pixel.y, pixel.z );
+			point.set( readPickingTarget[4*p],readPickingTarget[4*p+1],readPickingTarget[4*p+2] );
+			dist = point.distanceTo( origin );
+			if ( dist < minDist ) {
+				minDist = dist;
+				closestPoint.copy(point);
+				console.log(minDist)
+				break;
+			}
+		}
+	}
+
+	console.log(closestPoint)
+	if ( count == 0 ) {
+		return undefined;
+	}
+
+	return closestPoint;
+}
+
+const pointer = new THREE.Mesh(
+	new THREE.SphereGeometry(0.025, 32, 32),
+	new THREE.MeshBasicMaterial({color: 0xff0000})
+)
+scene.add(pointer)
 
 let xrRenderTarget;
 
@@ -106,14 +186,12 @@ function animate ( ) {
 	holoCubeDisplay.update();
 	holoCubeDisplayR.update();
 
-	const origin = new THREE.Vector3(-1, -1, -1);
-	const direction = new THREE.Vector3(1, 1, 1).normalize();
-	const epsilon = 0.125;
+
 
 	holoCubeDisplay.setPickingRay({
 		origin,
 		direction,
-		epsilon,
+		epsilon: guiParams.epsilon,
 	});
 
 
@@ -123,9 +201,21 @@ function animate ( ) {
 	renderer.xr.enabled = false;
 	if(renderer.xr.isPresenting) {
 		const stereoCameras = renderer.xr.getCamera().cameras;
+		controller1.getWorldDirection(controllerForward);
+		controller1.getWorldPosition(controllerPosition);
+		// console.log(controllerForward);
+		// console.log(controllerPosition);
+
+		controllerForward.normalize().negate();
 
 		holoCube.computeCameraMatrices( stereoCameras[0].position, cameras );
 		holoCubeDisplay.updateScreens( stereoCameras[0].position );
+
+		controllerArrow.setDirection(controllerForward);
+		controllerArrow.position.copy(controllerPosition);
+		origin.copy(controllerPosition);
+		direction.copy(controllerForward);
+		holoCubeDisplay.setPickingRay({ origin, direction, epsilon: guiParams.epsilon });
 
 		for( const face of ["x", "y", "z"] ) {
 			renderer.setRenderTarget( renderTargets[face] );
@@ -157,8 +247,25 @@ function animate ( ) {
 
 
 
-	renderer.setRenderTarget( null );
+	renderer.setRenderTarget( pickingRenderTarget );
+	renderer.clear();
+	// renderer.setRenderTarget( null );
+	renderer.render( holoCubeDisplay.screens, camera );
+	const closest = getClosestHit();
+	console.log(closest);
+	if( closest !== undefined ) {
+		// controllerArrow.setLength(closest.distanceTo(origin));
+		pointer.position.copy(closest)
+		console.log(closest);
+	}
+	else {
+		// pointer.position.copy(closest)
+		// controllerArrow.setLength(0);
+		pointer.set(0, 0, 0);
 
+	}
+
+	renderer.setRenderTarget( null );
 	renderer.render( holoCubeDisplay.screens, camera );
 
 	renderer.xr.enabled = VRenabled;
@@ -283,6 +390,7 @@ const guiParams = {
 		scale: new THREE.Vector3(1, 1, 1),
 		rotation: new THREE.Vector4(1, 0, 0, 0),
 	},
+	epsilon : 0.125
 }
 
 
@@ -318,41 +426,26 @@ remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "y").min(-1).max(1
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "z").min(-1).max(1).step(0.01).onChange(() => { updateAxisV("z", "x", "y")}).listen();
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
 
-
+gui.add(guiParams, "epsilon").min(0.01).max(1).step(0.01)
 
 
 
 /// VR specific code
 
 
-const interactiveGroup = new InteractiveGroup();
-interactiveGroup.listenToPointerEvents( renderer, camera );
+// const interactiveGroup = new InteractiveGroup();
+// interactiveGroup.listenToPointerEvents( renderer, camera );
 // interactiveGroup.listenToXRControllerEvents( controller1 );
 // interactiveGroup.listenToXRControllerEvents( controller2 );
 // scene.add( interactiveGroup );
 
-const guiMesh = new HTMLMesh( gui.domElement );
-const statsMesh = new HTMLMesh( gui.domElement );
-console.log(guiMesh)
-guiMesh.position.x = - 0.75;
-guiMesh.position.y = 1.5;
-guiMesh.position.z = - 0.5;
-guiMesh.rotation.y = Math.PI / 4;
-guiMesh.scale.setScalar( 5 );
-interactiveGroup.add( guiMesh );
+// const guiMesh = new HTMLMesh( gui.domElement );
+// const statsMesh = new HTMLMesh( gui.domElement );
+// console.log(guiMesh)
+// guiMesh.position.x = - 0.75;
+// guiMesh.position.y = 1.5;
+// guiMesh.position.z = - 0.5;
+// guiMesh.rotation.y = Math.PI / 4;
+// guiMesh.scale.setScalar( 5 );
+// interactiveGroup.add( guiMesh );
 
-
-const lineGeometry = new THREE.BufferGeometry();
-lineGeometry.setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 5 ) ] );
-
-const controller1 = renderer.xr.getController( 0 );
-controller1.add( new THREE.Line( lineGeometry ) );
-scene.add( controller1 );
-
-const controllerModelFactory = new XRControllerModelFactory();
-const controllerGrip1 = renderer.xr.getControllerGrip( 0 );
-controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
-scene.add( controllerGrip1 );
-
-interactiveGroup.listenToPointerEvents( renderer, camera );
-interactiveGroup.listenToXRControllerEvents( controller1 );

@@ -52,10 +52,12 @@ const fragmentShader = `
 		float dist = length(cross(toPoint, direction));
 
 		if(dist < epsilon && dot(direction, toPoint) > 0.)
-			gl_FragColor = vec4((localWorldPos.xyz), 1.0);
+			gl_FragColor = vec4(localWorldPos.xyz, 1.0);
+			// gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 		else
-			// discard;
-			gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+			discard;
+			// gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+			// gl_FragColor = vec4((localWorldPos.xyz), 1.0);
 
 		gl_FragDepth = (localClipPos.z / localClipPos.w) * 0.5 + 0.5;
 		// gl_FragColor = vec4( localWorldPos, 1.0 );
