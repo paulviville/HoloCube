@@ -420,19 +420,18 @@ gui.add(guiParams, "epsilon").min(0.001).max(1).step(0.001)
 /// VR specific code
 
 
-// const interactiveGroup = new InteractiveGroup();
-// interactiveGroup.listenToPointerEvents( renderer, camera );
-// interactiveGroup.listenToXRControllerEvents( controller1 );
-// interactiveGroup.listenToXRControllerEvents( controller2 );
-// scene.add( interactiveGroup );
+const interactiveGroup = new InteractiveGroup();
+interactiveGroup.listenToPointerEvents( renderer, camera );
+interactiveGroup.listenToXRControllerEvents( controller1 );
+scene.add( interactiveGroup );
 
-// const guiMesh = new HTMLMesh( gui.domElement );
+const guiMesh = new HTMLMesh( gui.domElement );
 // const statsMesh = new HTMLMesh( gui.domElement );
-// console.log(guiMesh)
-// guiMesh.position.x = - 0.75;
-// guiMesh.position.y = 1.5;
-// guiMesh.position.z = - 0.5;
-// guiMesh.rotation.y = Math.PI / 4;
-// guiMesh.scale.setScalar( 5 );
-// interactiveGroup.add( guiMesh );
+console.log(guiMesh)
+guiMesh.position.x = - 1.75;
+guiMesh.position.y = 0.5;
+guiMesh.position.z = - 0.75;
+guiMesh.rotation.y = Math.PI /6;
+guiMesh.scale.setScalar( 2 );
+interactiveGroup.add( guiMesh );
 
