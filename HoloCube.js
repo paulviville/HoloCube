@@ -185,8 +185,8 @@ export default class HoloCube {
 	worldToModel ( point ) {
 		const transform = new THREE.Matrix4( );
 		transform.makeScale( ...(new THREE.Vector3( 1, 1, 1 ).divide( this.#normalizedViewScale )) );
-		point.applyMatrix4( transform );
 		point.applyMatrix4( this.#invDisplayMatrix );
+		point.applyMatrix4( transform );
 		return point;
 	}
 

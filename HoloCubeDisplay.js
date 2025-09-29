@@ -51,7 +51,7 @@ export default class HoloCubeDisplay {
 				depth: new DepthMaterial( st.texture, st.depthTexture ),
 				picking: new PickingMaterial( st.depthTexture ),
 			}
-			this.#screens[face] = new THREE.Mesh( screenGeometry, this.#screenMaterials[face].picking );
+			this.#screens[face] = new THREE.Mesh( screenGeometry, this.#screenMaterials[face].depth );
 			this.#screens.group.add( this.#screens[face] );
 		}
 	}

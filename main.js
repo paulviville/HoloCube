@@ -11,7 +11,7 @@ import { InteractiveGroup } from './three/interactive/InteractiveGroup.js';
 import { HTMLMesh } from './three/interactive/HTMLMesh.js';
 import { XRControllerModelFactory } from './three/webxr/XRControllerModelFactory.js';
 
-const renderer = new THREE.WebGLRenderer(({alpha: true}));
+const renderer = new THREE.WebGLRenderer(({alpha: true, antialias: true}));
 renderer.autoClear = false;
 renderer.antialias = false;
 renderer.setPixelRatio( window.devicePixelRatio );
@@ -24,7 +24,7 @@ document.body.appendChild( VRButton.createButton( renderer ) );
 
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color( 0x000000 );
+scene.background = new THREE.Color( 0xccBBcc );
 const camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.01, 50 );
 camera.position.set( 1.5, 1.5, 2 );
 
@@ -74,7 +74,7 @@ const plane = new THREE.Mesh(
 	new THREE.PlaneGeometry(1, 1),
 	new THREE.MeshBasicMaterial({map: pickingRenderTarget.texture, color: 0xFFFFFF}),
 );
-scene.add(plane)
+// scene.add(plane)
 plane.position.set(2, 0, 0)
 
 
@@ -83,7 +83,6 @@ const holoCubeDisplay = new HoloCubeDisplay( holoCube, screenTextures );
 scene.add(holoCubeDisplay.display);
 scene.add(holoCubeDisplay.screens);
 
-// camera.layers.disable(1);
 
 const renderTargetsR = {};
 const screenTexturesR = {};
@@ -131,7 +130,7 @@ controller1.getWorldDirection(controllerForward);
 controller1.getWorldPosition(controllerPosition);
 
 const controllerArrow = new THREE.ArrowHelper(controllerForward, controllerForward)
-scene.add(controllerArrow)
+// scene.add(controllerArrow)
 
 
 const origin = new THREE.Vector3(-1, -1, -1);
@@ -178,6 +177,24 @@ scene.add(pointer)
 const pickingScene = new THREE.Scene();
 pickingScene.background = new THREE.Color( 0x000000 );
 
+function pickInScene ( camera ) {
+	renderer.setRenderTarget( pickingRenderTarget );
+	renderer.clear();
+	holoCubeDisplay.picking = true;
+	renderer.render( holoCubeDisplay.screens, camera );
+	const closest = getClosestHit();
+	
+	if( closest !== undefined ) {
+		pointer.position.copy(closest)
+	}
+	else {
+		pointer.position.set(10, 10, 10);
+	}
+	holoCubeDisplay.picking = false;
+
+	renderer.setRenderTarget( null );
+}
+
 function animate ( ) {
 	holoCubeDisplay.update();
 	holoCubeDisplayR.update();
@@ -199,8 +216,6 @@ function animate ( ) {
 		const stereoCameras = renderer.xr.getCamera().cameras;
 		controller1.getWorldDirection(controllerForward);
 		controller1.getWorldPosition(controllerPosition);
-		// console.log(controllerForward);
-		// console.log(controllerPosition);
 
 		controllerForward.normalize().negate();
 
@@ -223,6 +238,8 @@ function animate ( ) {
 			renderer.setRenderTarget( renderTargetsR[face] );
 			renderer.render( remoteScene, camerasR[face] );
 		}
+
+		pickInScene( stereoCameras[0] );
 	}
 
 	else {
@@ -233,41 +250,10 @@ function animate ( ) {
 			renderer.setRenderTarget( renderTargets[face] );
 			renderer.render( remoteScene, cameras[face] );
 		}
+
+		pickInScene( camera );
 	}
 
-
-
-
-
-
-
-	renderer.setRenderTarget( pickingRenderTarget );
-	renderer.clear();
-	// renderer.clearColor();
-	// renderer.setRenderTarget( null );
-	// renderer.setClearColor(new THREE.Color(0x000000))
-	// pickingScene.add(holoCubeDisplay.screens)
-	holoCubeDisplay.picking = true;
-	renderer.render( holoCubeDisplay.screens, camera );
-	const closest = getClosestHit();
-	
-	controllerArrow.setDirection(direction);
-	controllerArrow.position.copy(origin);
-	// console.log(closest);
-	if( closest !== undefined ) {
-		controllerArrow.setLength(closest.distanceTo(origin));
-		pointer.position.copy(closest)
-	}
-	else {
-		controllerArrow.setLength(0);
-		pointer.position.set(10, 10, 10);
-
-	}
-	// scene.add(holoCubeDisplay.screens)
-	// holoCubeDisplay.picking = false;
-
-	renderer.setRenderTarget( null );
-	// renderer.render( holoCubeDisplay.screens, camera );
 
 	renderer.xr.enabled = VRenabled;
 	renderer.setRenderTarget( currentRT );
@@ -285,7 +271,7 @@ renderer.xr.addEventListener('sessionstart', ( event ) => {
 	const transform = new XRRigidTransform( offsetPosition.multiplyScalar(-1), offsetRotation ); 
 	const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace( transform );
 
-	xrRenderTarget = renderer.getRenderTarget();
+	// xrRenderTarget = renderer.getRenderTarget();
 	renderer.xr.setReferenceSpace( teleportSpaceOffset );
 
 	scene.add(holoCubeDisplayR.screens);
@@ -391,7 +377,7 @@ const guiParams = {
 		scale: new THREE.Vector3(1, 1, 1),
 		rotation: new THREE.Vector4(1, 0, 0, 0),
 	},
-	epsilon : 0.125
+	epsilon : 0.01
 }
 
 
@@ -427,7 +413,7 @@ remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "y").min(-1).max(1
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "z").min(-1).max(1).step(0.01).onChange(() => { updateAxisV("z", "x", "y")}).listen();
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
 
-gui.add(guiParams, "epsilon").min(0.01).max(1).step(0.01)
+gui.add(guiParams, "epsilon").min(0.001).max(1).step(0.001)
 
 
 
