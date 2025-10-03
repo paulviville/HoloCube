@@ -117,10 +117,10 @@ const controller1 = renderer.xr.getController( 0 );
 controller1.add( new THREE.Line( lineGeometry ) );
 scene.add( controller1 );
 
-const controllerModelFactory = new XRControllerModelFactory();
-const controllerGrip1 = renderer.xr.getControllerGrip( 0 );
-controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
-scene.add( controllerGrip1 );
+// const controllerModelFactory = new XRControllerModelFactory();
+// const controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+// controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+// scene.add( controllerGrip1 );
 
 
 
@@ -176,15 +176,15 @@ scene.add(pointer)
 
 const pickingScene = new THREE.Scene();
 pickingScene.background = new THREE.Color( 0x000000 );
-
+const closestPoint = new THREE.Vector3();
 function pickInScene ( camera ) {
 	renderer.setRenderTarget( pickingRenderTarget );
 	renderer.clear();
 	holoCubeDisplay.picking = true;
 	renderer.render( holoCubeDisplay.screens, camera );
 	const closest = getClosestHit();
-	
 	if( closest !== undefined ) {
+		closestPoint.copy(closest);
 		pointer.position.copy(closest)
 	}
 	else {
@@ -195,6 +195,8 @@ function pickInScene ( camera ) {
 	renderer.setRenderTarget( null );
 }
 
+let scaleInput = 1;
+let displayScaleInput = 1;
 function animate ( ) {
 	holoCubeDisplay.update();
 	holoCubeDisplayR.update();
@@ -240,6 +242,28 @@ function animate ( ) {
 		}
 
 		pickInScene( stereoCameras[0] );
+
+
+		const session = renderer.xr.getSession();
+		if(session?.inputSources.length) {
+			const source = session.inputSources[0];
+			const gamepad = source.gamepad;
+			if( gamepad ) {
+				const axes = gamepad.axes;
+				if(axes.length > 0) {
+					if(Math.abs(axes[3]) > Math.abs(axes[2])) {
+						scaleInput += axes[3] * 0.01;
+						holoCube.viewScale = new THREE.Vector3(scaleInput, scaleInput, scaleInput);
+						// console.log(axes)
+					}
+					else{
+						displayScaleInput += axes[2] * 0.01;
+						holoCube.scale = new THREE.Vector3(displayScaleInput, displayScaleInput, displayScaleInput);
+					}
+
+				}
+			}
+		}
 	}
 
 	else {
@@ -419,19 +443,32 @@ gui.add(guiParams, "epsilon").min(0.001).max(1).step(0.001)
 
 /// VR specific code
 
+controller1.addEventListener('selectstart', () => {
+    console.log('Controller 1: Trigger pressed');
+    controller1.children[0].material.color.set(0xff0000)
+});
+controller1.addEventListener('selectend', () => {
+    console.log('Controller 1: Trigger released');
+    controller1.children[0].material.color.set(0xffffff)
+	const point = new THREE.Mesh(
+	new THREE.SphereGeometry(0.0125, 32, 32),
+	new THREE.MeshBasicMaterial({color: 0x00ffff})
+	)
+	point.position.copy(closestPoint)
+	scene.add(point)
+});
+// const interactiveGroup = new InteractiveGroup();
+// interactiveGroup.listenToPointerEvents( renderer, camera );
+// interactiveGroup.listenToXRControllerEvents( controller1 );
+// scene.add( interactiveGroup );
 
-const interactiveGroup = new InteractiveGroup();
-interactiveGroup.listenToPointerEvents( renderer, camera );
-interactiveGroup.listenToXRControllerEvents( controller1 );
-scene.add( interactiveGroup );
-
-const guiMesh = new HTMLMesh( gui.domElement );
-// const statsMesh = new HTMLMesh( gui.domElement );
-console.log(guiMesh)
-guiMesh.position.x = - 1.75;
-guiMesh.position.y = 0.5;
-guiMesh.position.z = - 0.75;
-guiMesh.rotation.y = Math.PI /6;
-guiMesh.scale.setScalar( 2 );
-interactiveGroup.add( guiMesh );
+// const guiMesh = new HTMLMesh( gui.domElement );
+// // const statsMesh = new HTMLMesh( gui.domElement );
+// console.log(guiMesh)
+// guiMesh.position.x = - 1.75;
+// guiMesh.position.y = 0.5;
+// guiMesh.position.z = - 0.75;
+// guiMesh.rotation.y = Math.PI /6;
+// guiMesh.scale.setScalar( 2 );
+// interactiveGroup.add( guiMesh );
 
