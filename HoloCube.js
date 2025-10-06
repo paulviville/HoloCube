@@ -43,10 +43,12 @@ export default class HoloCube {
 	set scale ( scale ) {
 		this.#displayTransform.scale.copy( scale );
 		this.#normalizeScale( );
+		this.#updateTransformMatrices( );
 	}
 
 	set position ( position ) {
 		this.#displayTransform.position.copy( position );
+		this.#updateTransformMatrices( );
 	}
 
 	get position ( ) {
@@ -55,6 +57,7 @@ export default class HoloCube {
 
 	set rotation ( rotation ) {
 		this.#displayTransform.rotation.copy( rotation );
+		this.#updateTransformMatrices( );
 	}
 
 	get rotation (  ) {
@@ -65,20 +68,28 @@ export default class HoloCube {
 	set viewScale ( scale ) {
 		this.#viewTransform.scale.copy( scale );
 		this.#normalizeScale( );
+		this.#updateTransformMatrices( );
 	}
 
 	set viewPosition ( position ) {
 		this.#viewTransform.position.copy( position );
+		this.#updateTransformMatrices( );
 	}
+
+	get viewPosition (  ) {
+		return this.#viewTransform.position.clone( );
+	}
+
 
 	set viewRotation ( rotation ) {
 		this.#viewTransform.rotation.copy( rotation );
+		this.#updateTransformMatrices( );
 	}
 
 	#normalizeScale ( ) {
 		this.#scalingFactor = Math.max( this.#viewTransform.scale.x, Math.max( this.#viewTransform.scale.y, this.#viewTransform.scale.z ) );
 		this.#normalizedViewScale.copy( this.#viewTransform.scale ).divideScalar( this.#scalingFactor );
-	
+		
 		this.#normalizedDisplayScale.copy( this.#normalizedViewScale );
 		this.#normalizedDisplayScale.multiply( this.#displayTransform.scale );
 		this.#invNormalizedDisplayScale.set( 1, 1, 1 ).divide( this.#normalizedDisplayScale );

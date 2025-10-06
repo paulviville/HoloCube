@@ -10,6 +10,7 @@ import Stats from './three/libs/stats.module.js';
 import { InteractiveGroup } from './three/interactive/InteractiveGroup.js';
 import { HTMLMesh } from './three/interactive/HTMLMesh.js';
 import { XRControllerModelFactory } from './three/webxr/XRControllerModelFactory.js';
+import SpatialAnnotations from "./SpatialAnnotations.js";
 
 const renderer = new THREE.WebGLRenderer(({alpha: true, antialias: true}));
 renderer.autoClear = false;
@@ -79,6 +80,7 @@ plane.position.set(2, 0, 0)
 
 
 const holoCube = new HoloCube();
+holoCube.position = new THREE.Vector3(0, 1, 0);
 const holoCubeDisplay = new HoloCubeDisplay( holoCube, screenTextures );
 scene.add(holoCubeDisplay.display);
 scene.add(holoCubeDisplay.screens);
@@ -197,10 +199,12 @@ function pickInScene ( camera ) {
 
 let scaleInput = 1;
 let displayScaleInput = 1;
+let squeezing = false;
 function animate ( ) {
 	holoCubeDisplay.update();
 	holoCubeDisplayR.update();
 
+	spatialAnnotations.update();
 
 
 	holoCubeDisplay.setPickingRay({
@@ -251,14 +255,19 @@ function animate ( ) {
 			if( gamepad ) {
 				const axes = gamepad.axes;
 				if(axes.length > 0) {
-					if(Math.abs(axes[3]) > Math.abs(axes[2])) {
-						scaleInput += axes[3] * 0.01;
-						holoCube.viewScale = new THREE.Vector3(scaleInput, scaleInput, scaleInput);
-						// console.log(axes)
+					if(!squeezing) {
+						if(Math.abs(axes[3]) > Math.abs(axes[2])) {
+							scaleInput += axes[3] * 0.01;
+							holoCube.viewScale = new THREE.Vector3(scaleInput, scaleInput, scaleInput);
+							// console.log(axes)
+						}
+						else{
+							displayScaleInput += axes[2] * 0.01;
+							holoCube.scale = new THREE.Vector3(displayScaleInput, displayScaleInput, displayScaleInput);
+						}	
 					}
-					else{
-						displayScaleInput += axes[2] * 0.01;
-						holoCube.scale = new THREE.Vector3(displayScaleInput, displayScaleInput, displayScaleInput);
+					else {
+						holoCube.viewPosition = holoCube.viewPosition.clone().add(new THREE.Vector3(-axes[2], axes[3], 0).multiplyScalar(0.025))
 					}
 
 				}
@@ -314,6 +323,12 @@ renderer.xr.addEventListener('sessionend', ( event ) => {
 
 
 
+const spatialAnnotations = new SpatialAnnotations(holoCube);
+scene.add(spatialAnnotations.annotations);
+
+
+
+
 function updateHoloCubeTransform ( ) {
 	holoCube.position = guiParams.holoCubeTransforms.position;
 	holoCube.scale = guiParams.holoCubeTransforms.scale;
@@ -326,6 +341,9 @@ function updateHoloCubeTransform ( ) {
 	const axisV = new THREE.Vector3().set(guiParams.remoteTransforms.rotation.x, guiParams.remoteTransforms.rotation.y, guiParams.remoteTransforms.rotation.z)
 	const rotationRemote = new THREE.Quaternion().setFromAxisAngle(axisV, guiParams.remoteTransforms.rotation.w);
 	holoCube.viewRotation = rotationRemote;
+
+	spatialAnnotations.update();
+	console.log("update")
 }
 
 function normalizeLockedX ( vector ) {
@@ -392,7 +410,7 @@ function updateAxes ( axis, a0, a1, a2 ) {
 const gui = new GUI({ width: 300 });
 const guiParams = {
 	holoCubeTransforms : {
-		position: new THREE.Vector3(0, 0, 0),
+		position: new THREE.Vector3(0, 1, 0),
 		scale: new THREE.Vector3(1, 1, 1),
 		rotation: new THREE.Vector4(1, 0, 0, 0),
 	},
@@ -450,25 +468,17 @@ controller1.addEventListener('selectstart', () => {
 controller1.addEventListener('selectend', () => {
     console.log('Controller 1: Trigger released');
     controller1.children[0].material.color.set(0xffffff)
-	const point = new THREE.Mesh(
-	new THREE.SphereGeometry(0.0125, 32, 32),
-	new THREE.MeshBasicMaterial({color: 0x00ffff})
-	)
-	point.position.copy(closestPoint)
-	scene.add(point)
-});
-// const interactiveGroup = new InteractiveGroup();
-// interactiveGroup.listenToPointerEvents( renderer, camera );
-// interactiveGroup.listenToXRControllerEvents( controller1 );
-// scene.add( interactiveGroup );
 
-// const guiMesh = new HTMLMesh( gui.domElement );
-// // const statsMesh = new HTMLMesh( gui.domElement );
-// console.log(guiMesh)
-// guiMesh.position.x = - 1.75;
-// guiMesh.position.y = 0.5;
-// guiMesh.position.z = - 0.75;
-// guiMesh.rotation.y = Math.PI /6;
-// guiMesh.scale.setScalar( 2 );
-// interactiveGroup.add( guiMesh );
+	spatialAnnotations.addAnnotation(closestPoint.clone());
+});
+
+controller1.addEventListener( 'squeezestart', () => {
+	squeezing = true;
+	console.log("squeeze start");
+} );
+
+controller1.addEventListener( 'squeezeend', () => {
+	squeezing = false;
+	console.log("squeeze end");
+} );
 
