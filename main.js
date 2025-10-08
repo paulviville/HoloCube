@@ -25,7 +25,7 @@ document.body.appendChild( VRButton.createButton( renderer ) );
 
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color( 0xccBBcc );
+scene.background = new THREE.Color( 0xffffff );
 const camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.01, 50 );
 camera.position.set( 1.5, 1.5, 2 );
 
@@ -33,7 +33,6 @@ const orbitControls = new OrbitControls( camera, renderer.domElement );
 
 const gridHelper = new THREE.GridHelper();
 scene.add( gridHelper );
-
 
 
 const textureWidth = 2048;
@@ -201,9 +200,10 @@ let scaleInput = 1;
 let displayScaleInput = 1;
 let squeezing = false;
 function animate ( ) {
-	holoCubeDisplay.update();
-	holoCubeDisplayR.update();
-
+	if(guiParams.update) {
+		holoCubeDisplay.update();
+		holoCubeDisplayR.update();
+	}
 	spatialAnnotations.update();
 
 
@@ -276,8 +276,8 @@ function animate ( ) {
 	}
 
 	else {
-		holoCube.computeCameraMatrices( camera.position, cameras );
-		holoCubeDisplay.updateScreens( camera.position );
+		if(guiParams.update)holoCube.computeCameraMatrices( camera.position, cameras );
+		if(guiParams.update) holoCubeDisplay.updateScreens( camera.position );
 		
 		for( const face of ["x", "y", "z"] ) {
 			renderer.setRenderTarget( renderTargets[face] );
@@ -419,7 +419,8 @@ const guiParams = {
 		scale: new THREE.Vector3(1, 1, 1),
 		rotation: new THREE.Vector4(1, 0, 0, 0),
 	},
-	epsilon : 0.01
+	epsilon : 0.01,
+	update: true,
 }
 
 
@@ -443,7 +444,7 @@ holoCubeScaleFolder.add(guiParams.holoCubeTransforms.scale, "z").min(0.1).max(10
 const remoteTransformsFolder = gui.addFolder("Remote Scene transforms");
 const remoteScenePositionFolder = remoteTransformsFolder.addFolder("position");
 remoteScenePositionFolder.add(guiParams.remoteTransforms.position, "x").min(-10.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
-remoteScenePositionFolder.add(guiParams.remoteTransforms.position, "y").min(0.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
+remoteScenePositionFolder.add(guiParams.remoteTransforms.position, "y").min(-10.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
 remoteScenePositionFolder.add(guiParams.remoteTransforms.position, "z").min(-10.0).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
 const remoteSceneScaleFolder = remoteTransformsFolder.addFolder("scale");
 remoteSceneScaleFolder.add(guiParams.remoteTransforms.scale, "x").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
@@ -456,7 +457,7 @@ remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "z").min(-1).max(1
 remoteRotationFolder.add(guiParams.remoteTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
 
 gui.add(guiParams, "epsilon").min(0.001).max(1).step(0.001)
-
+gui.add(guiParams, "update")
 
 
 /// VR specific code
