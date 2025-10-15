@@ -332,9 +332,9 @@ scene.add(spatialAnnotations.annotations);
 function updateHoloCubeTransform ( ) {
 	holoCube.position = guiParams.holoCubeTransforms.position;
 	holoCube.scale = guiParams.holoCubeTransforms.scale;
-	// const axisH = new THREE.Vector3().set(guiParams.holoCubeTransforms.rotation.x, guiParams.holoCubeTransforms.rotation.y, guiParams.holoCubeTransforms.rotation.z)
-	// const rotationHoloCube = new THREE.Quaternion().setFromAxisAngle(axisH, guiParams.holoCubeTransforms.rotation.w);
-	// holoCube.rotation = rotationHoloCube;
+	const axisH = new THREE.Vector3().set(guiParams.holoCubeTransforms.rotation.x, guiParams.holoCubeTransforms.rotation.y, guiParams.holoCubeTransforms.rotation.z)
+	const rotationHoloCube = new THREE.Quaternion().setFromAxisAngle(axisH, guiParams.holoCubeTransforms.rotation.w);
+	holoCube.rotation = rotationHoloCube;
 
 	holoCube.viewPosition = guiParams.remoteTransforms.position;
 	holoCube.viewScale = guiParams.remoteTransforms.scale;
@@ -435,11 +435,11 @@ const holoCubeScaleFolder = holoCubeTransformsFolder.addFolder("scale");
 holoCubeScaleFolder.add(guiParams.holoCubeTransforms.scale, "x").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
 holoCubeScaleFolder.add(guiParams.holoCubeTransforms.scale, "y").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
 holoCubeScaleFolder.add(guiParams.holoCubeTransforms.scale, "z").min(0.1).max(10.0).step(0.01).onChange(updateHoloCubeTransform);
-// const holoCubeRotationFolder = holoCubeTransformsFolder.addFolder("rotation");
-// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "x").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("x", "y", "z")}).listen();
-// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "y").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("y", "z", "x")}).listen();
-// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "z").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("z", "x", "y")}).listen();
-// holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
+const holoCubeRotationFolder = holoCubeTransformsFolder.addFolder("rotation");
+holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "x").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("x", "y", "z")}).listen();
+holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "y").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("y", "z", "x")}).listen();
+holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "z").min(-1).max(1).step(0.01).onChange(() => { updateAxisH("z", "x", "y")}).listen();
+holoCubeRotationFolder.add(guiParams.holoCubeTransforms.rotation, "w").name("angle").min(-Math.PI).max(Math.PI).step(0.01).onChange(updateHoloCubeTransform);
 
 const remoteTransformsFolder = gui.addFolder("Remote Scene transforms");
 const remoteScenePositionFolder = remoteTransformsFolder.addFolder("position");

@@ -27,13 +27,17 @@ const fragmentShader = `
 	}
 	
 	void main() {
-		float rawdepth = texture2D(tDepth, vUv).r;
+		vec2 uv = vUv;
+		if(!gl_FrontFacing) {
+			uv.x = 1.0 - uv.x;
+		}
+		float rawdepth = texture2D(tDepth, uv).r;
 		if(rawdepth >= 1.) 
 			discard;
 
 		vec4 remoteClipPos = vec4(
-			vUv.x * 2.0 - 1.0,
-			vUv.y * 2.0 - 1.0,
+			uv.x * 2.0 - 1.0,
+			uv.y * 2.0 - 1.0,
 			rawdepth * 2.0 - 1.0,
 			1.0);
 
@@ -49,7 +53,7 @@ const fragmentShader = `
 		vec4 localClipPos = projectionMatrix * viewMatrix * transform * vec4(localWorldPos, 1.0);
 
 		gl_FragDepth = (localClipPos.z / localClipPos.w) * 0.5 + 0.5;
-		gl_FragColor = vec4(texture2D(tColor, vUv).xyz * 2., 1.0);
+		gl_FragColor = vec4(texture2D(tColor, uv).xyz * 2., 1.0);
 	}
 `
 

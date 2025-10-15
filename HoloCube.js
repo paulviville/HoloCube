@@ -32,7 +32,7 @@ export default class HoloCube {
 	}
 	#_planes = {
 		x: [new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(-0.5, -0.5, 0.5), new THREE.Vector3(-0.5, 0.5, -0.5)],
-		y: [new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, -0.5, -0.5), new THREE.Vector3(-0.5, -0.5, 0.5)],
+		y: [new THREE.Vector3(0.5, -0.5, 0.5), new THREE.Vector3(-0.5, -0.5, 0.5), new THREE.Vector3(0.5, -0.5, -0.5)],
 		z: [new THREE.Vector3(0.5, -0.5, -0.5), new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, -0.5)],
 	}
 

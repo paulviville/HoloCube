@@ -45,7 +45,7 @@ export default class HoloCubeDisplay {
 
 	#initializeScreens ( screenTextures ) {
 		const screenGeometry = new THREE.PlaneGeometry( 1, 1 );
-
+		const target = new THREE.Vector3();
 		for ( const [ face, st ] of Object.entries( screenTextures ) ) {
 			this.#screenMaterials[face] = {
 				depth: new DepthMaterial( st.texture, st.depthTexture ),
@@ -53,6 +53,10 @@ export default class HoloCubeDisplay {
 			}
 			this.#screens[face] = new THREE.Mesh( screenGeometry, this.#screenMaterials[face].depth );
 			this.#screens.group.add( this.#screens[face] );
+			this.#screens[face].position[face] = 0.5;
+			target[face] = 1;
+			this.#screens[face].lookAt(target);
+			target.set(0, 0, 0)
 		}
 	}
 	
@@ -101,10 +105,6 @@ export default class HoloCubeDisplay {
 			/// change to handle 0 case == disable
 			const positive = value > -1 ? 1 : -1; 
 			this.#screens[face].position[face] = positive * 0.5;
-			direction.copy( this.#screens[face].position );
-			direction[face] += positive * 100;  // do it in world space instead of model
-			direction.add( this.#screens.group.position );
-			this.#screens[face].lookAt( direction );
 		}
 
 		const matrices = this.#holocube.computeCameraMatrices( eye );
